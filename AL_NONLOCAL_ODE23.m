@@ -19,15 +19,15 @@ initial_condition = A + delta*exp(1i*kappa*x);
 LRI_MATRIX = AL_PERIODIC(L/2,alpha); 
 
 % Define the problem: d/dt u_n = -i * ( 1 + |u_n|^2 ) * L_alpha u_n) 
-RHS = @(t,v) -1i*( LRI_MATRIX*v + abs(v).^2 .* (LRI_MATRIX * v) );
+RHS = @(t,u) -1i*( LRI_MATRIX*u + abs(u).^2 .* (LRI_MATRIX * u) );
 
-[tt,uu] = ode45(RHS, [0,100],initial_condition); % Solve problem
+[tt,u] = ode23t(RHS, [0,1000],initial_condition); % Solve problem
 
 % Solution plotting
 figure 
 
-%imagesc(tt,x,abs(uu-A)'.^2); 
-pcolor(tt,x,abs((uu-A)').^2);
+%imagesc(tt,x,abs(u-A)'.^2); 
+pcolor(tt,x,abs((u-A)').^2);
 cmocean('balance')
 colorbar; 
 shading interp;
@@ -36,28 +36,44 @@ ylabel("Grid"),
 
 title('Initial condition: $A + \delta e^{i\kappa n}$','Interpreter','latex','FontSize',16)
 subtitle("\kappa="+kappa+", A="+A+", \alpha="+alpha+", \delta="+delta)
-exportgraphics(gcf,'MI_attempt.pdf','ContentType','vector');
+%exportgraphics(gcf,'MI_attempt.pdf','ContentType','vector');
 
 
 %% Compute and plot spatial FT at final time
 figure
+subplot(2,1,1)
 n=length(x);
-uhat = fft(uu(end,:)-A, n,2);
+uhat = fft(u(end,:)-A, n);
 PSD =  uhat.*conj(uhat)/n;
+PSD = fftshift(PSD);
 freq = (2*pi/n)*[-L/2:L/2-1];
-plot(freq,fftshift(PSD), 'LineWidth',2.5)
+%plot(freq,PSD, 'LineWidth',2.5)
+
+plot(freq(126:133),PSD(126:133), 'LineWidth',2.5)
 set(gca,'FontSize',16)
 xlabel('Frequency')
 ylabel('Spatial FT')
-title('Spatial FT at final time: $|\hat{u_{tf}}|^2$','Interpreter','latex','FontSize',16)
-exportgraphics(gcf,'SpatialFT_attempt.pdf','ContentType','vector');
+title('Spatial FT at final time: $|\widehat{(u-A)}_{tf}|^2$','Interpreter','latex','FontSize',16)
+%exportgraphics(gcf,'SpatialFT_attempt.pdf','ContentType','vector');
 %Dormand-Prince integratorexportgraphics(f,'bartransparent.pdf','ContentType','vector',...
 %               'BackgroundColor','none')
+
+subplot(2,1,2)
+n=length(x);
+uhat = fft(u(end,:), n);
+PSD =  uhat.*conj(uhat)/n;
+PSD = fftshift(PSD);
+freq = (2*pi/n)*[-L/2:L/2-1];
+plot(freq(126:133),PSD(126:133), 'LineWidth',2.5)
+set(gca,'FontSize',16)
+xlabel('Frequency')
+ylabel('Spatial FT')
+title('Spatial FT at final time: $|\hat{u}_{tf}|^2$','Interpreter','latex','FontSize',16)
+
+
+
+%% Coefficient matrix
 sprintf("Simulation completed in: %0.5f", toc)
-
-
-% Modified Long range interaction on the lattice with periodic BC on n in {-N, ..., N-1}
-% See Appendix for the exact expression of periodic operator
 function M = AL_PERIODIC(N,a)
 tic
 
